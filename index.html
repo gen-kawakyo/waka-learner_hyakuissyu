@@ -187,8 +187,11 @@
                         console.log('データの読み込みに成功しました:', json.length, '首');
                         poems = json;
                         currentIndex = 0;
-                        document.getElementById('uploadArea').classList.add('hidden');
-                        document.getElementById('mainArea').classList.remove('hidden');
+                        
+                        // UIを表示状態にする
+                        document.getElementById('cardArea').classList.remove('hidden');
+                        document.getElementById('settingsPanel').classList.remove('hidden');
+                        
                         showPoem();
                     } else {
                         throw new Error('JSON形式が配列ではありません');
