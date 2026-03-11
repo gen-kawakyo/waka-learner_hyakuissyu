@@ -171,26 +171,39 @@
         let synth = window.speechSynthesis;
 
         // ページ読み込み時に自動でデータを取得
-        window.addEventListener('DOMContentLoaded', () => {
-            const defaultPath = 'waka_data/hyakuissyu.json';
+        function autoLoadData() {
+            const defaultPath = './waka_data/hyakuissyu.json';
+            console.log('データ自動読み込み開始:', defaultPath);
+            
             fetch(defaultPath)
                 .then(response => {
-                    if (!response.ok) throw new Error('Default file not found');
+                    if (!response.ok) {
+                        throw new Error(`ファイルが見つかりません (Status: ${response.status})`);
+                    }
                     return response.json();
                 })
                 .then(json => {
                     if (Array.isArray(json)) {
+                        console.log('データの読み込みに成功しました:', json.length, '首');
                         poems = json;
                         currentIndex = 0;
                         document.getElementById('uploadArea').classList.add('hidden');
                         document.getElementById('mainArea').classList.remove('hidden');
                         showPoem();
+                    } else {
+                        throw new Error('JSON形式が配列ではありません');
                     }
                 })
                 .catch(err => {
-                    console.log('自動読み込みスキップ: ', err.message);
+                    console.warn('自動読み込みに失敗しました。手動でファイルを選択してください。', err.message);
                 });
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', autoLoadData);
+        } else {
+            autoLoadData();
+        }
 
         function handleFile(input) {
             const file = input.files[0];
