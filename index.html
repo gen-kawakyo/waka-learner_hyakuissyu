@@ -65,7 +65,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center p-4">
 
     <!-- Header & Settings -->
     <div class="fixed top-0 left-0 w-full p-3 sm:p-4 flex flex-col items-center gap-3 sm:gap-4 z-10 bg-[#f5f5f0]/90 backdrop-blur-md border-b border-gray-200">
@@ -94,14 +94,14 @@
             <!-- Kana Options -->
             <div id="kanaOptions" class="hidden flex gap-1.5">
                 <button id="optKimariji" onclick="toggleSetting('kimariji')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm active">決字</button>
-                <button id="optFuda" onclick="toggleSetting('fuda')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm active">札印</button>
+                <button id="optFuda" onclick="toggleSetting('fuda')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:py-1.5 sm:!text-sm active">札印</button>
                 <button id="optRest" onclick="toggleSetting('rest')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm active">黒字</button>
             </div>
 
             <div class="h-5 w-px bg-gray-300 mx-0.5"></div>
 
             <!-- Global Options -->
-            <div class="flex gap-1.5">
+            <div id="globalOptions" class="flex gap-1.5">
                 <button id="optPoet" onclick="toggleSetting('poet')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm active">歌人</button>
                 <button id="readBtn" onclick="startReading()" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">詠む</button>
             </div>
@@ -110,14 +110,14 @@
     </div>
 
     <!-- Main Content -->
-    <main class="w-full max-w-3xl flex flex-col items-center mt-24 sm:mt-32">
+    <main class="w-full max-w-3xl flex flex-col items-center mt-40 sm:mt-48">
         <div id="cardArea" class="hidden w-full flex flex-col items-center gap-4 sm:gap-8">
             <div class="text-[10px] sm:text-sm font-mono text-[#5A5A40] font-bold">
                 <span id="progress">第 0 首</span>
             </div>
 
             <!-- Card -->
-            <div class="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-white rounded-[1rem] card-shadow border border-gray-100 p-4 sm:p-12 flex flex-col justify-center overflow-hidden">
+            <div class="relative w-full aspect-[16/13] sm:aspect-[16/10] bg-white rounded-[1rem] card-shadow border border-gray-100 p-4 sm:p-12 flex flex-col justify-center overflow-hidden">
                 <div id="poemContent" class="h-full w-full flex flex-col justify-center transition-opacity duration-300">
                     <div class="flex flex-col gap-3 sm:gap-12 text-xl sm:text-4xl font-bold tracking-[0.1em] items-center sm:items-start pt-8 sm:pt-0">
                         <div id="line1" class="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-[1em]">
@@ -128,7 +128,7 @@
                         <div id="line3" class="flex items-end"></div>
                         <div id="line4" class="sm:pl-[3em] flex items-end"></div>
                     </div>
-                    <div id="poetArea" class="mt-4 sm:mt-auto self-end pb-4 sm:pb-0">
+                    <div id="poetArea" class="mt-auto self-end pb-6 sm:pb-0">
                         <p id="poet" class="text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-r-2 border-[#5A5A40]/20 pr-2 sm:pr-4 text-right"></p>
                     </div>
                 </div>
