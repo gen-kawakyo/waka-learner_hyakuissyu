@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百人一首 閲覧帳</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Serif JP', serif;
+            background-color: #f5f5f0;
+            color: #2d2d2d;
+        }
+        .card-shadow {
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+        rt {
+            display: block;
+            font-family: sans-serif;
+            font-size: 0.45em;
+            color: #5A5A40;
+            line-height: 1.2;
+            height: 1.2em;
+            text-align: center;
+        }
+        ruby {
+            display: inline-flex;
+            flex-direction: column-reverse;
+            vertical-align: bottom;
+            align-items: center;
+            line-height: 1;
+        }
+        .rb {
+            display: block;
+            white-space: nowrap;
+        }
+        .invisible {
+            visibility: hidden;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #5A5A40;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .toggle-btn {
+            padding: 0.4rem 1.2rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #5A5A40;
+        }
+        .toggle-btn.active {
+            background: #5A5A40;
+            color: white;
+            font-weight: bold;
+            border-color: #5A5A40;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Header & Settings -->
+    <div class="fixed top-0 left-0 w-full p-4 flex flex-col items-center gap-4 z-10 bg-[#f5f5f0]/90 backdrop-blur-md border-b border-gray-200">
+        <div class="flex items-center gap-6">
+            <h1 class="text-xl font-bold text-[#5A5A40] tracking-widest">百人一首 閲覧帳</h1>
+            <button onclick="document.getElementById('fileInput').click()" class="px-4 py-1.5 bg-[#5A5A40] text-white rounded-full text-sm hover:bg-[#4A4A30] transition-all">
+                読込
+            </button>
+        </div>
+
+        <!-- Display Settings Panel -->
+        <div id="settingsPanel" class="hidden flex flex-wrap justify-center items-center gap-3 p-2 bg-gray-200/30 rounded-2xl border border-gray-200 shadow-sm">
+            <!-- Base Mode -->
+            <div class="flex bg-white p-1 rounded-full border border-gray-200 shadow-inner">
+                <button id="modeWaka" onclick="setBaseMode('waka')" class="toggle-btn active">和歌</button>
+                <button id="modeKana" onclick="setBaseMode('kana')" class="toggle-btn">ひらがな</button>
+            </div>
+
+            <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
+            <!-- Waka Options -->
+            <div id="wakaOptions" class="flex gap-2">
+                <button id="optRuby" onclick="toggleSetting('ruby')" class="toggle-btn active">ルビ</button>
+            </div>
+
+            <!-- Kana Options -->
+            <div id="kanaOptions" class="hidden flex gap-2">
+                <button id="optKimariji" onclick="toggleSetting('kimariji')" class="toggle-btn active">決まり字</button>
+                <button id="optFuda" onclick="toggleSetting('fuda')" class="toggle-btn active">札印</button>
+                <button id="optRest" onclick="toggleSetting('rest')" class="toggle-btn active">黒字</button>
+            </div>
+
+            <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
+            <!-- Global Options -->
+            <div class="flex gap-2">
+                <button id="optPoet" onclick="toggleSetting('poet')" class="toggle-btn active">作者名</button>
+                <button id="readBtn" onclick="startReading()" class="toggle-btn bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">詠む</button>
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".json" class="hidden" onchange="handleFile(this)">
+    </div>
+
+    <!-- Main Content -->
+    <main class="w-full max-w-3xl flex flex-col items-center mt-32">
+        <div id="cardArea" class="hidden w-full flex flex-col items-center gap-8">
+            <div class="text-sm font-mono text-[#5A5A40] font-bold">
+                <span id="progress">第 0 首</span>
+            </div>
+
+            <!-- Card -->
+            <div class="relative w-full aspect-[16/10] bg-white rounded-[1rem] card-shadow border border-gray-100 p-8 md:p-12 flex flex-col justify-between overflow-hidden">
+                <div id="poemContent" class="h-full w-full flex flex-col transition-opacity duration-300">
+                    <div class="flex flex-col gap-8 md:gap-12 text-3xl md:text-4xl font-bold tracking-[0.1em]">
+                        <div id="line1" class="whitespace-nowrap flex items-end gap-[1em]">
+                            <span id="phrase1"></span>
+                            <span id="phrase2"></span>
+                        </div>
+                        <div id="line2" class="flex items-end"></div>
+                        <div id="line3" class="flex items-end"></div>
+                        <div id="line4" class="pl-[3em] flex items-end"></div>
+                    </div>
+                    <div id="poetArea" class="mt-auto self-end pb-2">
+                        <p id="poet" class="text-lg md:text-xl font-medium text-[#5A5A40] opacity-70 border-r-2 border-[#5A5A40]/20 pr-4 text-right"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="w-full max-w-xl flex flex-col items-center gap-6">
+                <div class="w-full px-4">
+                    <input type="range" id="poemSlider" min="0" value="0" oninput="jumpTo(this.value)" class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-[#5A5A40]">
+                    <div id="decadeMarkers" class="flex justify-between mt-2 px-1"></div>
+                </div>
+
+                <div class="flex items-center gap-12">
+                    <button onclick="prevPoem()" id="prevBtn" class="p-4 bg-white text-[#5A5A40] rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <button onclick="nextPoem()" id="nextBtn" class="p-4 bg-white text-[#5A5A40] rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let poems = [];
+        let currentIndex = 0;
+        
+        // Settings State
+        let baseMode = 'waka'; // 'waka' or 'kana'
+        let settings = {
+            ruby: true,
+            kimariji: false,
+            fuda: false,
+            rest: true,
+            poet: true
+        };
+
+        let isReading = false;
+        let synth = window.speechSynthesis;
+
+        // ページ読み込み時に自動でデータを取得
+        window.addEventListener('DOMContentLoaded', () => {
+            const defaultPath = 'waka_data/hyakuissyu.json';
+            fetch(defaultPath)
+                .then(response => {
+                    if (!response.ok) throw new Error('Default file not found');
+                    return response.json();
+                })
+                .then(json => {
+                    if (Array.isArray(json)) {
+                        poems = json;
+                        currentIndex = 0;
+                        document.getElementById('uploadArea').classList.add('hidden');
+                        document.getElementById('mainArea').classList.remove('hidden');
+                        showPoem();
+                    }
+                })
+                .catch(err => {
+                    console.log('自動読み込みスキップ: ', err.message);
+                });
+        });
+
+        function handleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (Array.isArray(json)) {
+                        poems = json;
+                        currentIndex = 0;
+                        initJumpUI();
+                        showPoem();
+                        document.getElementById('cardArea').classList.remove('hidden');
+                        document.getElementById('settingsPanel').classList.remove('hidden');
+                    }
+                } catch (err) { alert('JSONの読み込みに失敗しました。'); }
+            };
+            reader.readAsText(file);
+        }
+
+        function setBaseMode(mode) {
+            baseMode = mode;
+            document.getElementById('modeWaka').classList.toggle('active', mode === 'waka');
+            document.getElementById('modeKana').classList.toggle('active', mode === 'kana');
+            document.getElementById('wakaOptions').classList.toggle('hidden', mode !== 'waka');
+            document.getElementById('kanaOptions').classList.toggle('hidden', mode !== 'kana');
+            showPoem();
+        }
+
+        function toggleSetting(key) {
+            settings[key] = !settings[key];
+            const btnId = 'opt' + key.charAt(0).toUpperCase() + key.slice(1);
+            const btn = document.getElementById(btnId);
+            if (btn) btn.classList.toggle('active', settings[key]);
+            showPoem();
+        }
+
+        function renderRuby(text) {
+            let processed = text;
+            if (!settings.ruby) {
+                processed = text.replace(/<rt>(.*?)<\/rt>/g, '<rt class="invisible">$1</rt>');
+            }
+            // ベース文字を .rb で包んで縦並びを防ぐ
+            return processed.replace(/<ruby>(.*?)<rt>/g, '<ruby><span class="rb">$1</span><rt>');
+        }
+
+        function renderKanaHighlight(text, targetString, colorClass, isTargetMode) {
+            if (!text) return '';
+            if (!isTargetMode) {
+                // ハイライト対象外（黒字部分）の制御
+                return `<span class="${settings.rest ? '' : 'opacity-0'}">${text}</span>`;
+            }
+            
+            const target = targetString.replace(/[ 　]/g, '');
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (i < target.length) {
+                    result += `<span class="${colorClass}">${char}</span>`;
+                } else {
+                    result += `<span class="${settings.rest ? '' : 'opacity-0'}">${char}</span>`;
+                }
+            }
+            return result;
+        }
+
+        function showPoem(readingStep = -1) {
+            if (poems.length === 0) return;
+            const poem = poems[currentIndex];
+            const content = document.getElementById('poemContent');
+            
+            content.style.opacity = 0;
+            
+            setTimeout(() => {
+                const f = (poem.first_half_ruby || poem.first_half).split(/[ 　]/).filter(Boolean);
+                const s = (poem.second_half_ruby || poem.second_half).split(/[ 　]/).filter(Boolean);
+                const fk = poem.first_kana.split(/[ 　]/).filter(Boolean);
+                const sk = poem.second_kana.split(/[ 　]/).filter(Boolean);
+                
+                const p = { p1: f[0], p2: f[1], p3: f[2], p4: s[0], p5: s[1] };
+                const pk = { p1: fk[0], p2: fk[1], p3: fk[2], p4: sk[0], p5: sk[1] };
+
+                // 5つの句（ステップ）の定義
+                const phrases = [
+                    { id: 'phrase1', text: p.p1, kana: pk.p1, type: 'first' },
+                    { id: 'phrase2', text: p.p2, kana: pk.p2, type: 'first' },
+                    { id: 'line2',   text: p.p3, kana: pk.p3, type: 'first' },
+                    { id: 'line3',   text: p.p4, kana: pk.p4, type: 'second' },
+                    { id: 'line4',   text: p.p5, kana: pk.p5, type: 'second' }
+                ];
+
+                phrases.forEach((phrase, idx) => {
+                    const el = document.getElementById(phrase.id);
+                    if (!el) return;
+
+                    // 表示制御: 読み上げモード中は、現在の句までを表示
+                    // 現在詠んでいる句を強調(1)、過去の句は少し薄く(0.4)、未来の句は消す(0)
+                    const opacity = readingStep === -1 ? 1 : (idx === readingStep ? 1 : (idx < readingStep ? 0.4 : 0));
+                    
+                    el.style.opacity = opacity;
+                    el.style.transition = 'opacity 0.6s ease-in-out';
+
+                    if (baseMode === 'kana') {
+                        const k = poem.kimariji;
+                        const fuda = poem.fuda_shirushi;
+                        let kanaHtml = '';
+                        if (phrase.type === 'first') {
+                            let offset = 0;
+                            if (idx === 1) offset = pk.p1.length;
+                            if (idx === 2) offset = pk.p1.length + pk.p2.length;
+                            kanaHtml = renderKanaHighlight(phrase.kana, settings.kimariji ? k : '', 'text-[#2E7D32]', true, offset);
+                        } else {
+                            let offset = 0;
+                            if (idx === 4) offset = pk.p4.length;
+                            kanaHtml = renderKanaHighlight(phrase.kana, settings.fuda ? fuda : '', 'text-[#8D6E63]', true, offset);
+                        }
+                        // .rb で包むことで横書きを維持
+                        el.innerHTML = `<ruby><span class="rb">${kanaHtml}</span><rt class="invisible">　</rt></ruby>`;
+                    } else {
+                        el.innerHTML = renderRuby(phrase.text);
+                    }
+                });
+                
+                document.getElementById('poet').innerText = poem.poet.split('|')[0];
+                document.getElementById('poetArea').classList.toggle('hidden', !settings.poet || readingStep !== -1);
+                document.getElementById('progress').innerText = `第 ${currentIndex + 1} 首`;
+                
+                updateNavigationUI();
+                content.style.opacity = 1;
+            }, 200);
+        }
+
+        function renderKanaHighlight(text, targetString, colorClass, isTargetMode, offset = 0) {
+            if (!text) return '';
+            if (!isTargetMode) return `<span class="${settings.rest ? '' : 'opacity-0'}">${text}</span>`;
+            
+            const target = targetString.replace(/[ 　]/g, '');
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const globalIdx = offset + i;
+                const char = text[i];
+                if (globalIdx < target.length) {
+                    result += `<span class="${colorClass}">${char}</span>`;
+                } else {
+                    result += `<span class="${settings.rest ? '' : 'opacity-0'}">${char}</span>`;
+                }
+            }
+            return result;
+        }
+
+        function startReading() {
+            if (synth.speaking) {
+                synth.cancel();
+                showPoem(-1);
+                return;
+            }
+
+            const poem = poems[currentIndex];
+            const fk = poem.first_kana.split(/[ 　]/).filter(Boolean);
+            const sk = poem.second_kana.split(/[ 　]/).filter(Boolean);
+            
+            const phrases = [fk[0], fk[1], fk[2], sk[0], sk[1]];
+            let currentStep = 0;
+
+            function speakNext() {
+                if (currentStep >= phrases.length) {
+                    setTimeout(() => showPoem(-1), 1500);
+                    return;
+                }
+
+                showPoem(currentStep);
+                const utterance = new SpeechSynthesisUtterance(phrases[currentStep]);
+                
+                // --- 読み上げパラメータの調整場所 ---
+                utterance.lang = 'ja-JP';
+                utterance.rate = 0.75; // 速さ (0.1〜10)
+                utterance.pitch = 1.1; // トーン (0〜2)
+                // ----------------------------------
+
+                utterance.onend = () => {
+                    currentStep++;
+                    let delay = 600; 
+                    if (currentStep === 2) delay = 1000; 
+                    if (currentStep === 3) delay = 1800; 
+                    
+                    setTimeout(speakNext, delay);
+                };
+
+                synth.speak(utterance);
+            }
+
+            speakNext();
+        }
+
+        function updateNavigationUI() {
+            const steps = [1, 11, 21, 31, 41, 51, 61, 71, 81, 91, 100];
+            steps.forEach(num => {
+                const m = document.getElementById(`marker-${num}`);
+                if (m) {
+                    const isActive = Math.floor(currentIndex / 10) === Math.floor((num-1)/10);
+                    m.classList.toggle('text-[#5A5A40]', isActive);
+                    m.classList.toggle('font-bold', isActive);
+                    m.classList.toggle('text-gray-400', !isActive);
+                }
+            });
+            document.getElementById('poemSlider').value = currentIndex;
+            document.getElementById('prevBtn').style.opacity = currentIndex === 0 ? 0.3 : 1;
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').style.opacity = currentIndex === poems.length - 1 ? 0.3 : 1;
+            document.getElementById('nextBtn').disabled = currentIndex === poems.length - 1;
+        }
+
+        function initJumpUI() {
+            const slider = document.getElementById('poemSlider');
+            slider.max = poems.length - 1;
+            const markers = document.getElementById('decadeMarkers');
+            markers.innerHTML = '';
+            const steps = [1, 11, 21, 31, 41, 51, 61, 71, 81, 91, 100];
+            steps.forEach(num => {
+                if (num <= poems.length) {
+                    const btn = document.createElement('button');
+                    btn.innerText = num;
+                    btn.className = 'text-[10px] font-mono text-gray-400 hover:text-[#5A5A40] hover:font-bold transition-all';
+                    btn.onclick = () => jumpTo(num - 1);
+                    btn.id = `marker-${num}`;
+                    markers.appendChild(btn);
+                }
+            });
+        }
+
+        function jumpTo(val) { currentIndex = parseInt(val); showPoem(); }
+        function nextPoem() { if (currentIndex < poems.length - 1) jumpTo(currentIndex + 1); }
+        function prevPoem() { if (currentIndex > 0) jumpTo(currentIndex - 1); }
+    </script>
+</body>
+</html>
