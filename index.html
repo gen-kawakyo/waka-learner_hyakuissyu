@@ -15,7 +15,10 @@
         .card-shadow {
             box-shadow: 0 20px 50px rgba(0,0,0,0.1);
         }
-        rt {
+
+        /* --- Ruby & Text Styling --- */
+        /* 横書き時のルビ設定 */
+        .horizontal-text rt {
             display: block;
             font-family: sans-serif;
             font-size: 0.45em;
@@ -24,13 +27,35 @@
             height: 1.2em;
             text-align: center;
         }
-        ruby {
+        .horizontal-text ruby {
             display: inline-flex;
             flex-direction: column-reverse;
             vertical-align: bottom;
             align-items: center;
             line-height: 1;
         }
+        
+        /* 縦書き時の設定 */
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: 100%;
+            display: flex;
+            flex-direction: row; /* vertical-rl なので row が縦方向の並びになる */
+            justify-content: flex-start;
+            gap: 1.5rem;
+        }
+        .vertical-text .line-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .vertical-text rt {
+            font-family: sans-serif;
+            font-size: 0.4em;
+            color: #5A5A40;
+        }
+
         .rb {
             display: block;
             white-space: nowrap;
@@ -38,6 +63,8 @@
         .invisible {
             visibility: hidden;
         }
+
+        /* --- UI Elements --- */
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -86,6 +113,13 @@
 
             <div class="h-5 w-px bg-gray-300 mx-0.5"></div>
 
+            <!-- Orientation -->
+            <div class="flex bg-white p-0.5 rounded-full border border-gray-200 shadow-inner">
+                <button id="optVertical" onclick="toggleSetting('vertical')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm">縦書</button>
+            </div>
+
+            <div class="h-5 w-px bg-gray-300 mx-0.5"></div>
+
             <!-- Waka Options -->
             <div id="wakaOptions" class="flex gap-1.5">
                 <button id="optRuby" onclick="toggleSetting('ruby')" class="toggle-btn !px-3 !py-1 !text-xs sm:!px-4 sm:!py-1.5 sm:!text-sm active">ルビ</button>
@@ -117,9 +151,10 @@
             </div>
 
             <!-- Card -->
-            <div class="relative w-full aspect-[16/13] sm:aspect-[16/10] bg-white rounded-[1rem] card-shadow border border-gray-100 p-4 sm:p-12 flex flex-col justify-center overflow-hidden">
+            <div id="poemCard" class="relative w-full aspect-[16/13] sm:aspect-[16/10] bg-white rounded-[1rem] card-shadow border border-gray-100 p-4 sm:p-12 flex flex-col justify-center overflow-hidden horizontal-text">
                 <div id="poemContent" class="h-full w-full flex flex-col justify-center transition-opacity duration-300">
-                    <div class="flex flex-col gap-3 sm:gap-12 text-xl sm:text-4xl font-bold tracking-[0.1em] items-center sm:items-start pt-8 sm:pt-0">
+                    <!-- 句のコンテナ（JSで中身を入れ替える） -->
+                    <div id="phraseContainer" class="flex flex-col gap-3 sm:gap-12 text-xl sm:text-4xl font-bold tracking-[0.1em] items-center sm:items-start pt-8 sm:pt-0">
                         <div id="line1" class="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-[1em]">
                             <span id="phrase1"></span>
                             <span id="phrase2"></span>
@@ -128,6 +163,7 @@
                         <div id="line3" class="flex items-end"></div>
                         <div id="line4" class="sm:pl-[3em] flex items-end"></div>
                     </div>
+                    
                     <div id="poetArea" class="mt-auto self-end pb-6 sm:pb-0">
                         <p id="poet" class="text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-r-2 border-[#5A5A40]/20 pr-2 sm:pr-4 text-right"></p>
                     </div>
@@ -158,76 +194,52 @@
         let currentIndex = 0;
         
         // Settings State
-        let baseMode = 'waka'; // 'waka' or 'kana'
+        let baseMode = 'waka'; 
         let settings = {
             ruby: true,
             kimariji: false,
             fuda: false,
             rest: true,
-            poet: true
+            poet: true,
+            vertical: false // 縦書き設定を追加
         };
 
-        let isReading = false;
         let synth = window.speechSynthesis;
 
-        // ページ読み込み時に自動でデータを取得
+        // --- Initialization ---
         function autoLoadData() {
             const defaultPath = 'waka_data/hyakuissyu.json';
-            console.log('データ自動読み込み開始:', defaultPath);
-            
             fetch(defaultPath)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`ファイルが見つかりません (Status: ${response.status})`);
-                    }
-                    return response.json();
-                })
+                .then(res => res.ok ? res.json() : Promise.reject())
                 .then(json => {
-                    if (Array.isArray(json)) {
-                        console.log('データの読み込みに成功しました:', json.length, '首');
-                        poems = json;
-                        currentIndex = 0;
-                        
-                        // UIを表示状態にする
-                        document.getElementById('cardArea').classList.remove('hidden');
-                        document.getElementById('settingsPanel').classList.remove('hidden');
-                        
-                        showPoem();
-                    } else {
-                        throw new Error('JSON形式が配列ではありません');
-                    }
+                    poems = json;
+                    document.getElementById('cardArea').classList.remove('hidden');
+                    document.getElementById('settingsPanel').classList.remove('hidden');
+                    initJumpUI();
+                    showPoem();
                 })
-                .catch(err => {
-                    console.warn('自動読み込みに失敗しました。手動でファイルを選択してください。', err.message);
-                });
+                .catch(() => console.warn('JSON load failed.'));
         }
 
-        if (document.readyState === 'loading') {
-            window.addEventListener('DOMContentLoaded', autoLoadData);
-        } else {
-            autoLoadData();
-        }
+        window.addEventListener('DOMContentLoaded', autoLoadData);
 
         function handleFile(input) {
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                try {
-                    const json = JSON.parse(e.target.result);
-                    if (Array.isArray(json)) {
-                        poems = json;
-                        currentIndex = 0;
-                        initJumpUI();
-                        showPoem();
-                        document.getElementById('cardArea').classList.remove('hidden');
-                        document.getElementById('settingsPanel').classList.remove('hidden');
-                    }
-                } catch (err) { alert('JSONの読み込みに失敗しました。'); }
+                const json = JSON.parse(e.target.result);
+                poems = json;
+                currentIndex = 0;
+                initJumpUI();
+                showPoem();
+                document.getElementById('cardArea').classList.remove('hidden');
+                document.getElementById('settingsPanel').classList.remove('hidden');
             };
             reader.readAsText(file);
         }
 
+        // --- UI Controls ---
         function setBaseMode(mode) {
             baseMode = mode;
             document.getElementById('modeWaka').classList.toggle('active', mode === 'waka');
@@ -245,30 +257,30 @@
             showPoem();
         }
 
+        // --- Rendering Logic ---
         function renderRuby(text) {
             let processed = text;
             if (!settings.ruby) {
                 processed = text.replace(/<rt>(.*?)<\/rt>/g, '<rt class="invisible">$1</rt>');
             }
-            // ベース文字を .rb で包んで縦並びを防ぐ
-            return processed.replace(/<ruby>(.*?)<rt>/g, '<ruby><span class="rb">$1</span><rt>');
+            // 横書き時のみ .rb で包む（縦書き時はブラウザ標準のルビ挙動に任せる）
+            if (!settings.vertical) {
+                processed = processed.replace(/<ruby>(.*?)<rt>/g, '<ruby><span class="rb">$1</span><rt>');
+            }
+            return processed;
         }
 
-        function renderKanaHighlight(text, targetString, colorClass, isTargetMode) {
+        function renderKanaHighlight(text, targetString, colorClass, isTargetMode, offset = 0) {
             if (!text) return '';
-            if (!isTargetMode) {
-                // ハイライト対象外（黒字部分）の制御
-                return `<span class="${settings.rest ? '' : 'opacity-0'}">${text}</span>`;
-            }
-            
+            if (!isTargetMode) return `<span class="${settings.rest ? '' : 'opacity-0'}">${text}</span>`;
             const target = targetString.replace(/[ 　]/g, '');
             let result = '';
             for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                if (i < target.length) {
-                    result += `<span class="${colorClass}">${char}</span>`;
+                const globalIdx = offset + i;
+                if (globalIdx < target.length) {
+                    result += `<span class="${colorClass}">${text[i]}</span>`;
                 } else {
-                    result += `<span class="${settings.rest ? '' : 'opacity-0'}">${char}</span>`;
+                    result += `<span class="${settings.rest ? '' : 'opacity-0'}">${text[i]}</span>`;
                 }
             }
             return result;
@@ -277,62 +289,102 @@
         function showPoem(readingStep = -1) {
             if (poems.length === 0) return;
             const poem = poems[currentIndex];
+            const card = document.getElementById('poemCard');
+            const container = document.getElementById('phraseContainer');
             const content = document.getElementById('poemContent');
             
             content.style.opacity = 0;
             
             setTimeout(() => {
+                // 縦書き・横書きのクラス切り替え
+                card.classList.toggle('vertical-text', settings.vertical);
+                card.classList.toggle('horizontal-text', !settings.vertical);
+
+                // データの準備
                 const f = (poem.first_half_ruby || poem.first_half).split(/[ 　]/).filter(Boolean);
                 const s = (poem.second_half_ruby || poem.second_half).split(/[ 　]/).filter(Boolean);
                 const fk = poem.first_kana.split(/[ 　]/).filter(Boolean);
                 const sk = poem.second_kana.split(/[ 　]/).filter(Boolean);
                 
-                const p = { p1: f[0], p2: f[1], p3: f[2], p4: s[0], p5: s[1] };
-                const pk = { p1: fk[0], p2: fk[1], p3: fk[2], p4: sk[0], p5: sk[1] };
+                const p = [f[0], f[1], f[2], s[0], s[1]];
+                const pk = [fk[0], fk[1], fk[2], sk[0], sk[1]];
 
-                // 5つの句（ステップ）の定義
-                const phrases = [
-                    { id: 'phrase1', text: p.p1, kana: pk.p1, type: 'first' },
-                    { id: 'phrase2', text: p.p2, kana: pk.p2, type: 'first' },
-                    { id: 'line2',   text: p.p3, kana: pk.p3, type: 'first' },
-                    { id: 'line3',   text: p.p4, kana: pk.p4, type: 'second' },
-                    { id: 'line4',   text: p.p5, kana: pk.p5, type: 'second' }
-                ];
+                // コンテナの中身を再構築
+                if (settings.vertical) {
+                    // 縦書きレイアウト: 上の句、下の句、作者名の3カラム構成
+                    container.className = "vertical-text text-2xl sm:text-4xl font-bold tracking-[0.2em] pt-4";
+                    container.innerHTML = `
+                        <div class="line-group">
+                            <div id="v-p1"></div>
+                            <div id="v-p2"></div>
+                            <div id="v-p3"></div>
+                        </div>
+                        <div class="line-group pt-12">
+                            <div id="v-p4"></div>
+                            <div id="v-p5"></div>
+                        </div>
+                        <!-- 作者名カラム（下の句の左隣に配置） -->
+                        <div class="flex flex-col justify-end pb-6 sm:pb-0">
+                            <p id="v-poet" class="text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-t-2 sm:border-t-4 border-[#5A5A40]/20 pt-2 sm:pt-4"></p>
+                        </div>
+                    `;
+                    content.className = "h-full w-full flex flex-col justify-center transition-opacity duration-300";
+                    document.getElementById('poetArea').classList.add('hidden');
+                } else {
+                    // 横書きレイアウト（従来通り）
+                    content.className = "h-full w-full flex flex-col justify-center transition-opacity duration-300";
+                    container.className = "flex flex-col gap-3 sm:gap-12 text-xl sm:text-4xl font-bold tracking-[0.1em] items-center sm:items-start pt-8 sm:pt-0";
+                    container.innerHTML = `
+                        <div id="line1" class="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-[1em]">
+                            <span id="phrase1"></span>
+                            <span id="phrase2"></span>
+                        </div>
+                        <div id="line2" class="flex items-end"></div>
+                        <div id="line3" class="flex items-end"></div>
+                        <div id="line4" class="sm:pl-[3em] flex items-end"></div>
+                    `;
+                    const poetArea = document.getElementById('poetArea');
+                    poetArea.classList.remove('hidden');
+                    poetArea.className = "mt-auto self-end pb-6 sm:pb-0";
+                    document.getElementById('poet').className = "text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-r-2 border-[#5A5A40]/20 pr-2 sm:pr-4 text-right";
+                }
 
-                phrases.forEach((phrase, idx) => {
-                    const el = document.getElementById(phrase.id);
+                // 各句の描画
+                const ids = settings.vertical ? ['v-p1', 'v-p2', 'v-p3', 'v-p4', 'v-p5'] : ['phrase1', 'phrase2', 'line2', 'line3', 'line4'];
+                
+                ids.forEach((id, idx) => {
+                    const el = document.getElementById(id);
                     if (!el) return;
 
-                    // 表示制御: 読み上げモード中は、現在の句までを表示
-                    // 現在詠んでいる句を強調(1)、過去の句は少し薄く(0.4)、未来の句は消す(0)
                     const opacity = readingStep === -1 ? 1 : (idx === readingStep ? 1 : (idx < readingStep ? 0.4 : 0));
-                    
                     el.style.opacity = opacity;
                     el.style.transition = 'opacity 0.6s ease-in-out';
 
                     if (baseMode === 'kana') {
                         const k = poem.kimariji;
                         const fuda = poem.fuda_shirushi;
-                        let kanaHtml = '';
-                        if (phrase.type === 'first') {
-                            let offset = 0;
-                            if (idx === 1) offset = pk.p1.length;
-                            if (idx === 2) offset = pk.p1.length + pk.p2.length;
-                            kanaHtml = renderKanaHighlight(phrase.kana, settings.kimariji ? k : '', 'text-[#2E7D32]', true, offset);
-                        } else {
-                            let offset = 0;
-                            if (idx === 4) offset = pk.p4.length;
-                            kanaHtml = renderKanaHighlight(phrase.kana, settings.fuda ? fuda : '', 'text-[#8D6E63]', true, offset);
-                        }
-                        // .rb で包むことで横書きを維持
-                        el.innerHTML = `<ruby><span class="rb">${kanaHtml}</span><rt class="invisible">　</rt></ruby>`;
+                        let offset = 0;
+                        if (idx === 1) offset = pk[0].length;
+                        if (idx === 2) offset = pk[0].length + pk[1].length;
+                        if (idx === 4) offset = pk[3].length;
+                        
+                        const isFirst = idx < 3;
+                        const kanaHtml = renderKanaHighlight(pk[idx], isFirst ? (settings.kimariji ? k : '') : (settings.fuda ? fuda : ''), isFirst ? 'text-[#2E7D32]' : 'text-[#8D6E63]', true, offset);
+                        el.innerHTML = settings.vertical ? kanaHtml : `<ruby><span class="rb">${kanaHtml}</span><rt class="invisible">　</rt></ruby>`;
                     } else {
-                        el.innerHTML = renderRuby(phrase.text);
+                        el.innerHTML = renderRuby(p[idx]);
                     }
                 });
                 
-                document.getElementById('poet').innerText = poem.poet.split('|')[0];
-                document.getElementById('poetArea').classList.toggle('hidden', !settings.poet || readingStep !== -1);
+                const poetName = poem.poet.split('|')[0];
+                if (settings.vertical) {
+                    document.getElementById('v-poet').innerText = poetName;
+                    document.getElementById('v-poet').parentElement.style.opacity = (settings.poet && readingStep === -1) ? 1 : 0;
+                } else {
+                    document.getElementById('poet').innerText = poetName;
+                    document.getElementById('poetArea').classList.toggle('hidden', !settings.poet || readingStep !== -1);
+                }
+                
                 document.getElementById('progress').innerText = `第 ${currentIndex + 1} 首`;
                 
                 updateNavigationUI();
