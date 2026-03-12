@@ -41,19 +41,22 @@
             text-orientation: upright;
             height: 100%;
             display: flex;
-            flex-direction: row; /* vertical-rl なので row が縦方向の並びになる */
-            justify-content: flex-start;
-            gap: 1.5rem;
-        }
-        .vertical-text .line-group {
-            display: flex;
-            flex-direction: column;
+            flex-direction: column; /* vertical-rl では column が右から左への並びになる */
+            justify-content: center;
+            align-items: flex-start;
             gap: 2rem;
         }
         .vertical-text rt {
             font-family: sans-serif;
             font-size: 0.4em;
             color: #5A5A40;
+        }
+        .vertical-text .poet-col {
+            margin-right: 1rem;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            padding-bottom: 2rem;
         }
 
         .rb {
@@ -311,24 +314,19 @@
 
                 // コンテナの中身を再構築
                 if (settings.vertical) {
-                    // 縦書きレイアウト: 上の句、下の句、作者名の3カラム構成
-                    container.className = "vertical-text text-2xl sm:text-4xl font-bold tracking-[0.2em] pt-4";
+                    // 縦書きレイアウト: すべての句と作者名を横並び（カラム）にする
+                    container.className = "vertical-text text-2xl sm:text-4xl font-bold tracking-[0.2em]";
                     container.innerHTML = `
-                        <div class="line-group">
-                            <div id="v-p1"></div>
-                            <div id="v-p2"></div>
-                            <div id="v-p3"></div>
-                        </div>
-                        <div class="line-group pt-12">
-                            <div id="v-p4"></div>
-                            <div id="v-p5"></div>
-                        </div>
-                        <!-- 作者名カラム（下の句の左隣に配置） -->
-                        <div class="flex flex-col justify-end pb-6 sm:pb-0">
+                        <div id="v-p1"></div>
+                        <div id="v-p2"></div>
+                        <div id="v-p3"></div>
+                        <div id="v-p4" class="mr-4 sm:mr-8"></div> <!-- 上下の句の間に少し隙間 -->
+                        <div id="v-p5"></div>
+                        <div class="poet-col">
                             <p id="v-poet" class="text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-t-2 sm:border-t-4 border-[#5A5A40]/20 pt-2 sm:pt-4"></p>
                         </div>
                     `;
-                    content.className = "h-full w-full flex flex-col justify-center transition-opacity duration-300";
+                    content.className = "h-full w-full flex flex-col justify-center items-center transition-opacity duration-300";
                     document.getElementById('poetArea').classList.add('hidden');
                 } else {
                     // 横書きレイアウト（従来通り）
