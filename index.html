@@ -41,10 +41,14 @@
             text-orientation: upright;
             height: 100%;
             display: flex;
-            flex-direction: column; /* vertical-rl では column が右から左への並びになる */
+            flex-direction: column; /* 右から左へ列を並べる */
+            flex-wrap: nowrap;     /* 折り返しを禁止 */
             justify-content: center;
-            align-items: flex-start;
-            gap: 2rem;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        @media (min-width: 640px) {
+            .vertical-text { gap: 2rem; }
         }
         .vertical-text rt {
             font-family: sans-serif;
@@ -52,11 +56,13 @@
             color: #5A5A40;
         }
         .vertical-text .poet-col {
-            margin-right: 1rem;
+            margin-right: 0.5rem;
             display: flex;
-            flex-direction: row;
             align-items: flex-end;
-            padding-bottom: 2rem;
+            padding-bottom: 1rem;
+        }
+        @media (min-width: 640px) {
+            .vertical-text .poet-col { margin-right: 1.5rem; padding-bottom: 2rem; }
         }
 
         .rb {
@@ -315,15 +321,15 @@
                 // コンテナの中身を再構築
                 if (settings.vertical) {
                     // 縦書きレイアウト: すべての句と作者名を横並び（カラム）にする
-                    container.className = "vertical-text text-2xl sm:text-4xl font-bold tracking-[0.2em]";
+                    container.className = "vertical-text text-lg sm:text-4xl font-bold tracking-[0.1em] sm:tracking-[0.2em]";
                     container.innerHTML = `
                         <div id="v-p1"></div>
                         <div id="v-p2"></div>
                         <div id="v-p3"></div>
-                        <div id="v-p4" class="mr-4 sm:mr-8"></div> <!-- 上下の句の間に少し隙間 -->
+                        <div id="v-p4" class="mr-2 sm:mr-8"></div> <!-- 上下の句の間に少し隙間 -->
                         <div id="v-p5"></div>
                         <div class="poet-col">
-                            <p id="v-poet" class="text-xs sm:text-xl font-medium text-[#5A5A40] opacity-70 border-t-2 sm:border-t-4 border-[#5A5A40]/20 pt-2 sm:pt-4"></p>
+                            <p id="v-poet" class="text-[10px] sm:text-xl font-medium text-[#5A5A40] opacity-70 border-t sm:border-t-4 border-[#5A5A40]/20 pt-1 sm:pt-4"></p>
                         </div>
                     `;
                     content.className = "h-full w-full flex flex-col justify-center items-center transition-opacity duration-300";
